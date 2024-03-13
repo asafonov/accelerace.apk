@@ -12,7 +12,7 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
         <activity
-            android:name="org.asafonov.app.MainActivity"
+            android:name="org.asafonov.accelerace.MainActivity"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
             android:label="@string/app_name"
             android:exported="true"
