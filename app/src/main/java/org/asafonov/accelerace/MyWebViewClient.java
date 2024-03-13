@@ -1,4 +1,4 @@
-package org.asafonov.app;
+package org.asafonov.accelerace;
 
 import android.content.Intent;
 import android.net.Uri;
