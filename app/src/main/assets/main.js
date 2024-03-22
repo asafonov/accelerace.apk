@@ -76,6 +76,49 @@ class MessageBus {
     this.subscribers = null;
   }
 }
+class Timer {
+  constructor (interval) {
+    this.setInterval(interval)
+    this.inc = 0
+    this.ticks = []
+  }
+  getInterval() {
+    return this.interval
+  }
+  getFPS() {
+    return 1000 / this.interval
+  }
+  setInterval (interval) {
+    this.interval = interval
+  }
+  add (tick) {
+    this.inc++
+    this.ticks.push({id: this.inc, tick: tick})
+    if (! this.timeout) {
+      this.timeout = setTimeout(() => this.tick(), this.interval)
+    }
+    return this.inc
+  }
+  remove (id) {
+    this.ticks = this.ticks.filter(i => i.id !== id)
+  }
+  tick() {
+    if (this.ticks.length === 0) return
+    const length = this.ticks.length
+    for (let i = 0; i < length; ++i) {
+      if (this.ticks.length > 0) {
+        const tick = this.ticks.shift().tick
+        tick()
+      }
+    }
+    this.timeout = setTimeout(() => this.tick(), this.interval)
+  }
+  destroy() {
+    this.timeout && clearTimeout(this.timeout)
+    this.timeout = null
+    this.inc = null
+  }
+}
 class Updater {
   constructor (upstreamVersionUrl) {
     this.upstreamVersionUrl = upstreamVersionUrl
@@ -216,7 +259,7 @@ class CarView {
       left: this.roadRect.left,
       top: window.innerHeight - rect.height * 1.5 - rect.top
     }
-    this.speed = this.roadRect.width / (speed || 25)
+    this.speed = this.roadRect.width / (speed || asafonov.timer.getFPS())
     asafonov.player = this.carRect
     this.display()
     this.onTouchProxy = this.onTouch.bind(this)
@@ -244,7 +287,13 @@ class CarView {
     let movedHorizontally = left !== undefined && left !== null && left !== 0
     let movedVertically = top !== undefined && top !== null && top !== 0
     if (movedHorizontally) {
+      const before = this.carRect.left
       this.carRect.left = this.carRect.left + left
+      const middle = this.roadRect.left + this.roadRect.width / 2 - this.carRect.width / 2
+      if ((before < middle && this.carRect.left >= middle) || (before > middle && this.carRect.left <=middle)) {
+        this.carRect.left = middle
+        movedHorizontally = false
+      }
       if (this.carRect.left <= this.roadRect.left) {
         this.carRect.left = this.roadRect.left
         movedHorizontally = false
@@ -259,14 +308,15 @@ class CarView {
   }
   moveLeft() {
     const moved = this.move(0, -this.speed)
-    moved && (this.timeout = setTimeout(() => this.moveLeft(), 40))
+    moved && (this.timeout = asafonov.timer.add(() => this.moveLeft()))
   }
   moveRight() {
     const moved = this.move(0, this.speed)
-    moved && (this.timeout = setTimeout(() => this.moveRight(), 40))
+    moved && (this.timeout = asafonov.timer.add(() => this.moveRight()))
   }
   stop() {
-    this.timeout && clearTimeout(this.timeout)
+    this.timeout && asafonov.timer.remove(this.timeout)
+    this.timeout = null
   }
   destroy() {
     this.removeEventListeners()
@@ -283,7 +333,7 @@ class EnemyView {
     this.id = id
     this.element = document.querySelector(`#car_${id}`)
     this.element.style.display = 'flex'
-    const rect = this.element.querySelector('svg path').getBoundingClientRect()
+    const rect = this.element.querySelector('img').getBoundingClientRect()
     this.roadRect = document.querySelector('.road_sides').getBoundingClientRect()
     const left = this.roadRect.left + Math.random() * (this.roadRect.right - rect.width - this.roadRect.left)
     this.carRect = {
@@ -320,7 +370,7 @@ class EnemyView {
       return
     }
     if (moved) {
-      this.timeout = setTimeout(() => this.moveVertical(), 40)
+      this.timeout = asafonov.timer.add(() => this.moveVertical())
       if (top < window.innerHeight / 2 && this.carRect.top >= window.innerHeight / 2) {
         asafonov.messageBus.send(asafonov.events.ENEMY_HALFWAY, {id: this.id})
       }
@@ -330,7 +380,8 @@ class EnemyView {
     }
   }
   stop() {
-    this.timeout && clearTimeout(this.timeout)
+    this.timeout && asafonov.timer.remove(this.timeout)
+    this.timeout = null
   }
   isGameOver() {
     const isVerticalCollision = (this.carRect.top >= asafonov.player.top && this.carRect.top <= asafonov.player.top + asafonov.player.height) || (this.carRect.top + this.carRect.height >= asafonov.player.top && this.carRect.top + this.carRect.height <= asafonov.player.top + asafonov.player.height)
@@ -391,10 +442,10 @@ class EnemyListView {
 }
 class GameView {
   constructor() {
-    this.speed = window.innerHeight / 80
+    this.speed = window.innerHeight / asafonov.timer.getFPS() / 3 // 3 secs for screen ride
     this.score = 0
-    this.roadView = new RoadView(32, 2)
-    this.carView = new CarView(16)
+    this.roadView = new RoadView(asafonov.timer.getFPS(), 2, {roadLines: true, lights: true, trees: true, houses: true})
+    this.carView = new CarView(asafonov.timer.getFPS() / 2)
     this.enemyListView = new EnemyListView(this.speed)
     this.addEventListeners()
   }
@@ -434,13 +485,14 @@ class GameView {
   }
 }
 class RoadView {
-  constructor (speed, lightsPerLine) {
+  constructor (speed, lightsPerLine, options) {
+    this.options = options || {roadLines: true, lights: true, trees: true, houses: true}
     this.parallaxRatio = 2 / 3
     this.updateSpeed(speed)
-    this.initRoadLines()
-    this.initLights(lightsPerLine)
-    this.initTrees()
-    this.initHouses()
+    this.options.roadLines && this.initRoadLines()
+    this.options.lights && this.initLights(lightsPerLine)
+    this.options.trees && this.initTrees()
+    this.options.houses && this.initHouses()
     this.draw()
   }
   initRoadLines() {
@@ -541,26 +593,25 @@ class RoadView {
     const div = document.createElement('div')
     div.classList.add('svg_pic')
     div.classList.add('light')
-    div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 15"><path d="M7.5,0A7.5,7.5,0,1,1,0,7.5,7.5,7.5,0,0,1,7.5,0Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 15"><path d="M7.5,0A7.5,7.5,0,1,1,0,7.5,7.5,7.5,0,0,1,7.5,0Z"/></svg>'
     return div
   }
   getHouse() {
-    return '<div class="svg_pic decor house"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 102"><path d="M54.5 101.5H.5l27-27v-47 47l27 27V.58ZM.5.5v100.92Zm0 0h54l-27 27Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 102"><path d="M54.5 101.5H.5l27-27v-47 47l27 27V.58ZM.5.5v100.92Zm0 0h54l-27 27Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 102"><path d="M54.5 101.5H.5l27-27v-47 47l27 27V.58ZM.5.5v100.92Zm0 0h54l-27 27Z"/></svg></div>'
+    return '<div class="svg_pic decor house"><img src="./images/house.png"></div>'
   }
   getSmallHouse() {
-    return '<div class="svg_pic decor small_house"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 55"><path d="M.5 54.5V.5l14.44 27h25.13-25.13L.5 54.5h53.95Zm54-54H.55Zm0 0v54l-14.44-27Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 55"><path d="M.5 54.5V.5l14.44 27h25.13-25.13L.5 54.5h53.95Zm54-54H.55Zm0 0v54l-14.44-27Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 55"><path d="M.5 54.5V.5l14.44 27h25.13-25.13L.5 54.5h53.95Zm54-54H.55Zm0 0v54l-14.44-27Z"/></svg></div>'
+    return '<div class="svg_pic decor small_house"><img src="./images/small_house.png"></div>'
   }
   getPalmTree() {
-    return '<div class="svg_pic decor palm_tree"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 55.822"><path d="M28.549.5C27.724.383 24.22 8 24.464 9.131s3.382 3.066 3.382 3.066l-4.057.7v6.358l-5.231-4.333-2.146 4.333-3.79-3.155s1.953-2.945.532-4.245-5.815-3.068-6.216-.93.591 5.2 4.612 9.483 10.852 6.618 11.471 7.641-5.194-2.941-9-3.551a9.253 9.253 0 0 0-6.172 1.079c.069-.05-.032-1.093-.043.029s.375 4.364 0 4.457.326-3.981-1.5-4.086-5.807 1.94-5.807 3.668 5.807 3.246 5.807 3.246a43.353 43.353 0 0 0 6.846 1.052c2.287 0 2.3-1.052 2.3-1.052l-5.6 5.735s-4.185 5.039-3.877 6.719 4.152.742 5.123 0-1.24-2.967-1.24-2.967l3.729-2.223v4.254s11.278-9.276 12.2-9.562-8.52 8.416-8.52 8.416-1.48 2.419-.857 3.336 3.35.331 3.35.331l-4.306 1.806s-.224 4.688.956 5.347 3.762-2.71 3.762-2.71-.793-2.342-.413-2.637 1.934 1.457 1.934 1.457 2.659-1.645 2.768-2.76-2.518-1.275-2.333-1.7 1.753 1.547 3.073 0 2.206-6.189 2.206-6.189v3.719l2.749 4.169 4.053-.833-2.467 3.593 5.187 5.131 1.442-6.587-1.054-6.357-5.029-6.315 9.781 8.346 1.542-2.378v3.313l5.25 1.254-2.873-7.972h-5.221l3.8-2.564-7.243-6.417 6.831 5.2 2.939-.416v-3.075l2.663 2.594 5.748-1.052-7.618-6.473-2.786 2.419.333-3.231-3.937-1.114-2.117 1.108 4.233-4.136-1.541-1.585 2.079-3.318 2.939 1.381s4.59-6.1 2.663-7.022-7.964.961-10.371 3.332 1.355 5.69.743 6.152-3.191-4.3-3.191-4.3l-3.11 2.545-5.305 10.183s5.892-8.542 4.578-15.942S29.374.617 28.549.5Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 55.822"><path d="M28.549.5C27.724.383 24.22 8 24.464 9.131s3.382 3.066 3.382 3.066l-4.057.7v6.358l-5.231-4.333-2.146 4.333-3.79-3.155s1.953-2.945.532-4.245-5.815-3.068-6.216-.93.591 5.2 4.612 9.483 10.852 6.618 11.471 7.641-5.194-2.941-9-3.551a9.253 9.253 0 0 0-6.172 1.079c.069-.05-.032-1.093-.043.029s.375 4.364 0 4.457.326-3.981-1.5-4.086-5.807 1.94-5.807 3.668 5.807 3.246 5.807 3.246a43.353 43.353 0 0 0 6.846 1.052c2.287 0 2.3-1.052 2.3-1.052l-5.6 5.735s-4.185 5.039-3.877 6.719 4.152.742 5.123 0-1.24-2.967-1.24-2.967l3.729-2.223v4.254s11.278-9.276 12.2-9.562-8.52 8.416-8.52 8.416-1.48 2.419-.857 3.336 3.35.331 3.35.331l-4.306 1.806s-.224 4.688.956 5.347 3.762-2.71 3.762-2.71-.793-2.342-.413-2.637 1.934 1.457 1.934 1.457 2.659-1.645 2.768-2.76-2.518-1.275-2.333-1.7 1.753 1.547 3.073 0 2.206-6.189 2.206-6.189v3.719l2.749 4.169 4.053-.833-2.467 3.593 5.187 5.131 1.442-6.587-1.054-6.357-5.029-6.315 9.781 8.346 1.542-2.378v3.313l5.25 1.254-2.873-7.972h-5.221l3.8-2.564-7.243-6.417 6.831 5.2 2.939-.416v-3.075l2.663 2.594 5.748-1.052-7.618-6.473-2.786 2.419.333-3.231-3.937-1.114-2.117 1.108 4.233-4.136-1.541-1.585 2.079-3.318 2.939 1.381s4.59-6.1 2.663-7.022-7.964.961-10.371 3.332 1.355 5.69.743 6.152-3.191-4.3-3.191-4.3l-3.11 2.545-5.305 10.183s5.892-8.542 4.578-15.942S29.374.617 28.549.5Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 55.822"><path d="M28.549.5C27.724.383 24.22 8 24.464 9.131s3.382 3.066 3.382 3.066l-4.057.7v6.358l-5.231-4.333-2.146 4.333-3.79-3.155s1.953-2.945.532-4.245-5.815-3.068-6.216-.93.591 5.2 4.612 9.483 10.852 6.618 11.471 7.641-5.194-2.941-9-3.551a9.253 9.253 0 0 0-6.172 1.079c.069-.05-.032-1.093-.043.029s.375 4.364 0 4.457.326-3.981-1.5-4.086-5.807 1.94-5.807 3.668 5.807 3.246 5.807 3.246a43.353 43.353 0 0 0 6.846 1.052c2.287 0 2.3-1.052 2.3-1.052l-5.6 5.735s-4.185 5.039-3.877 6.719 4.152.742 5.123 0-1.24-2.967-1.24-2.967l3.729-2.223v4.254s11.278-9.276 12.2-9.562-8.52 8.416-8.52 8.416-1.48 2.419-.857 3.336 3.35.331 3.35.331l-4.306 1.806s-.224 4.688.956 5.347 3.762-2.71 3.762-2.71-.793-2.342-.413-2.637 1.934 1.457 1.934 1.457 2.659-1.645 2.768-2.76-2.518-1.275-2.333-1.7 1.753 1.547 3.073 0 2.206-6.189 2.206-6.189v3.719l2.749 4.169 4.053-.833-2.467 3.593 5.187 5.131 1.442-6.587-1.054-6.357-5.029-6.315 9.781 8.346 1.542-2.378v3.313l5.25 1.254-2.873-7.972h-5.221l3.8-2.564-7.243-6.417 6.831 5.2 2.939-.416v-3.075l2.663 2.594 5.748-1.052-7.618-6.473-2.786 2.419.333-3.231-3.937-1.114-2.117 1.108 4.233-4.136-1.541-1.585 2.079-3.318 2.939 1.381s4.59-6.1 2.663-7.022-7.964.961-10.371 3.332 1.355 5.69.743 6.152-3.191-4.3-3.191-4.3l-3.11 2.545-5.305 10.183s5.892-8.542 4.578-15.942S29.374.617 28.549.5Z"/></svg></div>'
+    return '<div class="svg_pic decor palm_tree"><img src="./images/palm_tree.png"></div>'
   }
   getTree() {
-    return '<div class="svg_pic decor tree"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56.108"><path d="M28.024.5a12.577 12.577 0 0 0-3.734 5.386 37.661 37.661 0 0 0-1.637 9.035 27.858 27.858 0 0 0-6.859-4.936 18.257 18.257 0 0 0-7.27-1.476s.207 6.711 4.354 11.278 12.236 6.991 12.236 6.991-8.187-4.173-14.341-3.857S.5 28.043.5 28.043a18.556 18.556 0 0 0 8.964 4.6c5.217.879 11.9-1.088 11.9-1.088s-6.635 1.963-9.846 5.883-3 9.794-3 9.794 6.224.632 10.639-3.016 7.021-11.573 7.021-11.573.553.983-1.494 4.795-1.756 5.545-1.615 7.308c.461 5.74 4.949 10.859 4.949 10.859a19.577 19.577 0 0 0 4.795-9.7c.733-5.473-1.863-12.2-1.863-12.2s2.229 7.124 6.341 10.5 10.105 3.016 10.105 3.016a24.193 24.193 0 0 0-2.022-8.027c-1.862-4.125-8.083-5.492-16.083-10.316 0 0 6.98 4.85 14.712 4.372a16.411 16.411 0 0 0 11.491-5.221 13.737 13.737 0 0 0-8.724-4.687c-5.523-.584-13.371 2.351-13.371 2.351a19.3 19.3 0 0 0 10.6-7.318c4.31-5.989 3.394-9.88 3.394-9.88s-4.449-.861-10.105 3.541-8 12.5-8 12.5 3.841-7.632 3.522-13.646S28.024.5 28.024.5Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56.108"><path d="M28.024.5a12.577 12.577 0 0 0-3.734 5.386 37.661 37.661 0 0 0-1.637 9.035 27.858 27.858 0 0 0-6.859-4.936 18.257 18.257 0 0 0-7.27-1.476s.207 6.711 4.354 11.278 12.236 6.991 12.236 6.991-8.187-4.173-14.341-3.857S.5 28.043.5 28.043a18.556 18.556 0 0 0 8.964 4.6c5.217.879 11.9-1.088 11.9-1.088s-6.635 1.963-9.846 5.883-3 9.794-3 9.794 6.224.632 10.639-3.016 7.021-11.573 7.021-11.573.553.983-1.494 4.795-1.756 5.545-1.615 7.308c.461 5.74 4.949 10.859 4.949 10.859a19.577 19.577 0 0 0 4.795-9.7c.733-5.473-1.863-12.2-1.863-12.2s2.229 7.124 6.341 10.5 10.105 3.016 10.105 3.016a24.193 24.193 0 0 0-2.022-8.027c-1.862-4.125-8.083-5.492-16.083-10.316 0 0 6.98 4.85 14.712 4.372a16.411 16.411 0 0 0 11.491-5.221 13.737 13.737 0 0 0-8.724-4.687c-5.523-.584-13.371 2.351-13.371 2.351a19.3 19.3 0 0 0 10.6-7.318c4.31-5.989 3.394-9.88 3.394-9.88s-4.449-.861-10.105 3.541-8 12.5-8 12.5 3.841-7.632 3.522-13.646S28.024.5 28.024.5Z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56.108"><path d="M28.024.5a12.577 12.577 0 0 0-3.734 5.386 37.661 37.661 0 0 0-1.637 9.035 27.858 27.858 0 0 0-6.859-4.936 18.257 18.257 0 0 0-7.27-1.476s.207 6.711 4.354 11.278 12.236 6.991 12.236 6.991-8.187-4.173-14.341-3.857S.5 28.043.5 28.043a18.556 18.556 0 0 0 8.964 4.6c5.217.879 11.9-1.088 11.9-1.088s-6.635 1.963-9.846 5.883-3 9.794-3 9.794 6.224.632 10.639-3.016 7.021-11.573 7.021-11.573.553.983-1.494 4.795-1.756 5.545-1.615 7.308c.461 5.74 4.949 10.859 4.949 10.859a19.577 19.577 0 0 0 4.795-9.7c.733-5.473-1.863-12.2-1.863-12.2s2.229 7.124 6.341 10.5 10.105 3.016 10.105 3.016a24.193 24.193 0 0 0-2.022-8.027c-1.862-4.125-8.083-5.492-16.083-10.316 0 0 6.98 4.85 14.712 4.372a16.411 16.411 0 0 0 11.491-5.221 13.737 13.737 0 0 0-8.724-4.687c-5.523-.584-13.371 2.351-13.371 2.351a19.3 19.3 0 0 0 10.6-7.318c4.31-5.989 3.394-9.88 3.394-9.88s-4.449-.861-10.105 3.541-8 12.5-8 12.5 3.841-7.632 3.522-13.646S28.024.5 28.024.5Z"/></svg></div>'
+    return '<div class="svg_pic decor tree"><img src="./images/tree.png"></div>'
   }
   updatePosition() {
-    this.updateRoadLines()
-    this.updateTrees()
-    this.updateHouses()
-    this.updateLights()
+    this.options.roadLines && this.updateRoadLines()
+    this.options.trees && this.updateTrees()
+    this.options.houses && this.updateHouses()
+    this.options.lights && this.updateLights()
   }
   updateRoadLines() {
     this.roadLineOffset += this.step
@@ -598,10 +649,11 @@ class RoadView {
   }
   draw() {
     this.updatePosition()
-    this.timeout = setTimeout(() => this.draw(), 40)
+    this.timeout = asafonov.timer.add(() => this.draw())
   }
   stop() {
-    this.timeout && clearTimeout(this.timeout)
+    this.timeout && asafonov.timer.remove(this.timeout)
+    this.timeout = null
   }
   destroy() {
     this.lightsPerLine = null
@@ -609,8 +661,7 @@ class RoadView {
     this.treeOffset = null
     this.houseLeftOffset = null
     this.houseRightOffset = null
-    this.timeout && clearTimeout(this.timeout)
-    this.timeout = null
+    this.stop()
   }
 }
 class UpdaterView {
@@ -635,6 +686,7 @@ class UpdaterView {
 window.asafonov = {}
 window.asafonov.version = '0.1'
 window.asafonov.messageBus = new MessageBus()
+window.asafonov.timer = new Timer(40)
 window.asafonov.events = {
   GAME_OVER: 'GAME_OVER',
   ENEMY_DESTROYED: 'ENEMY_DESTROYED',
@@ -649,5 +701,6 @@ window.onerror = (msg, url, line) => {
 document.addEventListener("DOMContentLoaded", function (event) {
   const updaterView = new UpdaterView('https://raw.githubusercontent.com/asafonov/accelerace/master/VERSION.txt', 'https://github.com/asafonov/accelerace.apk/releases/download/{VERSION}/app-release.apk')
   updaterView.showUpdateDialogIfNeeded()
+  asafonov.timer.setInterval(80)
   const gameView = new GameView()
 })

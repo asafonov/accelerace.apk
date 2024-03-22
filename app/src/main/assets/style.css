@@ -17,7 +17,7 @@
   --stroke_colored: max(0.4vw, 0.4vh);
   --stroke_white: max(0.059vw, 0.059vh);
   --height_car: max(15vw, 15vh);
-  --light: calc(var(--height_car)/1.5);
+  --light: calc(var(--height_car)/6);
   --tree: calc(var(--height_car)/3);
   --palm_tree: calc(var(--height_car)/2.4);
   --small_house: calc(var(--height_car)/2.48);
@@ -71,13 +71,13 @@ body,
   filter: blur(var(--blur));
 }
 
-.svg_pic.decor svg:nth-child(1) {
-  filter: blur(calc(var(--blur)*1.1));
-}
-
 .svg_pic.car {
   height: var(--height_car);
   z-index: 99;
+}
+
+.svg_pic.car img {
+  height: calc(var(--height_car) * 0.7);
 }
 
 .svg_pic.car svg:nth-child(1) path {
@@ -106,15 +106,6 @@ body,
 .svg_pic.car#main_car svg:nth-child(1) path,
 .svg_pic.car#main_car svg:nth-child(2) path {
   stroke: var(--color_yellow);
-}
-
-.svg_pic.car#car_1 svg:nth-child(1) path,
-.svg_pic.car#car_1 svg:nth-child(2) path {
-  stroke: var(--color_navy);
-}
-.svg_pic.car#car_2 svg:nth-child(1) path,
-.svg_pic.car#car_2 svg:nth-child(2) path {
-  stroke: var(--color_violet);
 }
 
 .svg_pic.car#car_1, .svg_pic.car#car_2 {
@@ -156,91 +147,40 @@ body,
   align-items: center;
   height: var(--light);
   width: var(--light);
-}
-
-.svg_pic.light svg path {
-  fill: var(--color_lines);
-  stroke: var(--color_lines);
-  transform: scale(0.8);
-  transform-origin: center;
-}
-.svg_pic.light svg:nth-child(1) {
-  height: 100%;
-  filter: blur(calc(var(--blur)*3));
-}
-.svg_pic.light svg:nth-child(2) {
-  height: calc(var(--light)/3.33);
+  background-color: var(--color_lines);
+  box-shadow: 0px 0px calc(var(--light) * 2) calc(var(--light) * 1.2) var(--color_lines);
+  border-radius: 50%;
 }
 
 .lights_section {
-  width: calc(var(--height_car)/1.5);
+  width: calc(var(--ligth));
   height: 100%;
   z-index: 999;
 }
 .lights_section:first-of-type {
-  left: calc(var(--light)*0.37);
+  left: 0;
 }
 .lights_section:last-of-type {
-  right: calc(var(--light)*0.37);
-}
-
-.lights_section .svg_pic.light:nth-child(2) {
-  top: calc(var(--height_car)*0.7);
-}
-.lights_section .svg_pic.light:nth-child(3) {
-  top: calc(var(--height_car)*1.4);
-}
-.lights_section .svg_pic.light:nth-child(4) {
-  top: calc(var(--height_car)*2.1);
-}
-.lights_section .svg_pic.light:nth-child(5) {
-  top: calc(var(--height_car)*2.8);
+  right: 0;
 }
 
 .svg_pic.decor {
   opacity: 0.4;
 }
 
-.svg_pic.decor svg:nth-child(1) path {
-  stroke-width: var(--stroke_blured);
-}
-.svg_pic.decor svg:nth-child(2) path {
-  stroke-width: calc(var(--stroke_colored)/4);
-}
-.svg_pic.decor svg:nth-child(3) path {
-  stroke: var(--color_lines);
-  stroke-width: calc(var(--stroke_white)/2);
-}
-
-.svg_pic.tree {
+.svg_pic.tree img {
   height: var(--tree);
 }
-.svg_pic.tree svg:nth-child(1) path,
-.svg_pic.tree svg:nth-child(2) path,
-.svg_pic.palm_tree svg:nth-child(1) path,
-.svg_pic.palm_tree svg:nth-child(2) path {
-  stroke: var(--color_tree);
-}
 
-.svg_pic.palm_tree {
+.svg_pic.palm_tree img {
   height: var(--palm_tree);
 }
 
-.svg_pic.house {
+.svg_pic.house img {
   height: var(--house);
 }
-.svg_pic.house svg path {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.svg_pic.house svg:nth-child(1) path,
-.svg_pic.house svg:nth-child(2) path,
-.svg_pic.small_house svg:nth-child(1) path,
-.svg_pic.small_house svg:nth-child(2) path {
-  stroke: var(--color_brown);
-}
 
-.svg_pic.small_house {
+.svg_pic.small_house img {
   height: var(--small_house);
 }
 
@@ -262,7 +202,6 @@ body,
   display: flex;
   flex-direction: row;
 }
-
 
 .decor_section .decor_part .tree_line,
 .decor_section .decor_part .house_line {
