@@ -81,6 +81,7 @@ class Timer {
     this.setInterval(interval)
     this.inc = 0
     this.ticks = []
+    this.isPause = false
   }
   getInterval() {
     return this.interval
@@ -91,7 +92,16 @@ class Timer {
   setInterval (interval) {
     this.interval = interval
   }
+  pause() {
+    this.timeout && clearTimeout(this.timeout)
+    this.isPause = true
+  }
+  play() {
+    this.isPause = false
+    this.timeout = setTimeout(() => this.tick(), this.interval)
+  }
   add (tick) {
+    if (this.isPause) return
     this.inc++
     this.ticks.push({id: this.inc, tick: tick})
     if (! this.timeout) {
@@ -441,24 +451,53 @@ class EnemyListView {
   }
 }
 class GameView {
-  constructor() {
+  constructor (delay) {
     this.speed = window.innerHeight / asafonov.timer.getFPS() / 3 // 3 secs for screen ride
     this.score = 0
+    this.scoreContainer = document.querySelector('#score')
     this.roadView = new RoadView(asafonov.timer.getFPS(), 2, {roadLines: true, lights: true, trees: true, houses: true})
     this.carView = new CarView(asafonov.timer.getFPS() / 2)
-    this.enemyListView = new EnemyListView(this.speed)
+    this.playButton = document.querySelector('.game_play')
+    this.pauseButton = document.querySelector('.game_pause')
+    this.onPlayClickProxy = this.onPlayClick.bind(this)
+    this.onPauseClickProxy = this.onPauseClick.bind(this)
     this.addEventListeners()
+    setTimeout(() => this.initEnemy(), delay)
+    setTimeout(() => {
+      document.querySelector('.countdown').style.display = 'none'
+      this.pauseButton.style.display = 'flex'
+    }, delay + 1500)
+  }
+  initEnemy() {
+    this.enemyListView = new EnemyListView(this.speed)
+  }
+  onPlayClick (event) {
+    event.stopPropagation()
+    this.pauseButton.style.display = 'flex'
+    this.playButton.style.display = 'none'
+    asafonov.timer.play()
+  }
+  onPauseClick (event) {
+    event.stopPropagation()
+    this.pauseButton.style.display = 'none'
+    this.playButton.style.display = 'flex'
+    asafonov.timer.pause()
   }
   addEventListeners() {
+    this.playButton.addEventListener('click', this.onPlayClickProxy)
+    this.pauseButton.addEventListener('click', this.onPauseClickProxy)
     asafonov.messageBus.subscribe(asafonov.events.ENEMY_DESTROYED, this, 'onEnemyDestroyed')
     asafonov.messageBus.subscribe(asafonov.events.GAME_OVER, this, 'onGameOver')
   }
   removeEventListeners() {
+    this.playButton.removeEventListener('click', this.onPlayClickProxy)
+    this.pauseButton.removeEventListener('click', this.onPauseClickProxy)
     asafonov.messageBus.unsubscribe(asafonov.events.ENEMY_DESTROYED, this, 'onEnemyDestroyed')
     asafonov.messageBus.unsubscribe(asafonov.events.GAME_OVER, this, 'onGameOver')
   }
   onEnemyDestroyed() {
     this.score++
+    this.scoreContainer.innerHTML = this.score
     if (this.score % 5 === 0) {
       this.speed *= 1.1
       this.enemyListView.setSpeed(this.speed)
@@ -482,6 +521,8 @@ class GameView {
     this.carView.destroy()
     this.carView = null
     this.speed = null
+    this.score = null
+    this.scoreContainer = null
   }
 }
 class RoadView {
@@ -702,5 +743,5 @@ document.addEventListener("DOMContentLoaded", function (event) {
   const updaterView = new UpdaterView('https://raw.githubusercontent.com/asafonov/accelerace/master/VERSION.txt', 'https://github.com/asafonov/accelerace.apk/releases/download/{VERSION}/app-release.apk')
   updaterView.showUpdateDialogIfNeeded()
   asafonov.timer.setInterval(80)
-  const gameView = new GameView()
+  const gameView = new GameView(5500)
 })
