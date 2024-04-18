@@ -58,9 +58,16 @@ public class MainActivity extends Activity {
         }
 
         public void onSensorChanged(SensorEvent event) {
-            float x = event.values[0];
             float y = event.values[1];
-            float z = event.values[2];
+            double b = 1;
+
+            if (y > b) {
+              mWebView.evaluateJavascript("asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
+            }
+
+            if (y < -b) {
+              mWebView.evaluateJavascript("asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
+            }
         }
     };
 }

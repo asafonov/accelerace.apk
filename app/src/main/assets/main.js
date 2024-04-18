@@ -104,26 +104,27 @@ class CarView {
     this.speed = this.roadRect.width / (speed || asafonov.timer.getFPS())
     asafonov.player = this.carRect
     this.display()
-    this.onTouchProxy = this.onTouch.bind(this)
     this.addEventListeners()
   }
   addEventListeners() {
-    document.body.addEventListener('click', this.onTouchProxy)
+    asafonov.messageBus.subscribe(asafonov.events.CAR_MOVE_RIGHT, this, 'onMoveRight')
+    asafonov.messageBus.subscribe(asafonov.events.CAR_MOVE_LEFT, this, 'onMoveLeft')
   }
   removeEventListeners() {
-    document.body.removeEventListener('click', this.onTouchProxy)
-  }
-  onTouch(event) {
-    this.stop()
-    if (event.clientX > window.innerWidth / 2) {
-      this.moveRight()
-    } else {
-      this.moveLeft()
-    }
+    asafonov.messageBus.unsubscribe(asafonov.events.CAR_MOVE_RIGHT, this, 'onMoveRight')
+    asafonov.messageBus.unsubscribe(asafonov.events.CAR_MOVE_LEFT, this, 'onMoveLeft')
   }
   display() {
     this.element.style.left = `${this.carRect.left}px`
     this.element.style.top = `${this.carRect.top}px`
+  }
+  onMoveRight() {
+    this.stop()
+    this.moveRight()
+  }
+  onMoveLeft() {
+    this.stop()
+    this.moveLeft()
   }
   move(top, left) {
     let movedHorizontally = left !== undefined && left !== null && left !== 0
@@ -293,6 +294,7 @@ class GameView {
     this.pauseButton = document.querySelector('.game_pause')
     this.onPlayClickProxy = this.onPlayClick.bind(this)
     this.onPauseClickProxy = this.onPauseClick.bind(this)
+    this.onTouchProxy = this.onTouch.bind(this)
     this.addEventListeners()
     setTimeout(() => this.initEnemy(), delay)
     setTimeout(() => {
@@ -315,15 +317,24 @@ class GameView {
     this.playButton.style.display = 'flex'
     asafonov.timer.pause()
   }
+  onTouch(event) {
+    if (event.clientX > window.innerWidth / 2) {
+      asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)
+    } else {
+      asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)
+    }
+  }
   addEventListeners() {
     this.playButton.addEventListener('click', this.onPlayClickProxy)
     this.pauseButton.addEventListener('click', this.onPauseClickProxy)
+    document.body.addEventListener('click', this.onTouchProxy)
     asafonov.messageBus.subscribe(asafonov.events.ENEMY_DESTROYED, this, 'onEnemyDestroyed')
     asafonov.messageBus.subscribe(asafonov.events.GAME_OVER, this, 'onGameOver')
   }
   removeEventListeners() {
     this.playButton.removeEventListener('click', this.onPlayClickProxy)
     this.pauseButton.removeEventListener('click', this.onPauseClickProxy)
+    document.body.removeEventListener('click', this.onTouchProxy)
     asafonov.messageBus.unsubscribe(asafonov.events.ENEMY_DESTROYED, this, 'onEnemyDestroyed')
     asafonov.messageBus.unsubscribe(asafonov.events.GAME_OVER, this, 'onGameOver')
   }
@@ -538,13 +549,15 @@ class RoadView {
   }
 }
 window.asafonov = {}
-window.asafonov.version = '0.3'
+window.asafonov.version = '0.5'
 window.asafonov.messageBus = new MessageBus()
 window.asafonov.timer = new Timer(40)
 window.asafonov.events = {
   GAME_OVER: 'GAME_OVER',
   ENEMY_DESTROYED: 'ENEMY_DESTROYED',
-  ENEMY_HALFWAY: 'ENEMY_HALFWAY'
+  ENEMY_HALFWAY: 'ENEMY_HALFWAY',
+  CAR_MOVE_RIGHT: 'CAR_MOVE_RIGHT',
+  CAR_MOVE_LEFT: 'CAR_MOVE_LEFT'
 }
 window.asafonov.settings = {
 }
