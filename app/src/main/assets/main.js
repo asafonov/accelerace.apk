@@ -92,6 +92,7 @@ class Timer {
 }
 class CarView {
   constructor (speed) {
+    this.isMoving = false
     this.element = document.querySelector('#main_car')
     const rect = this.element.querySelector('svg path').getBoundingClientRect()
     this.roadRect = document.querySelector('.road_sides').getBoundingClientRect()
@@ -119,14 +120,13 @@ class CarView {
     this.element.style.top = `${this.carRect.top}px`
   }
   onMoveRight() {
-    this.stop()
-    this.moveRight()
+    if (! this.isMoving) this.moveRight()
   }
   onMoveLeft() {
-    this.stop()
-    this.moveLeft()
+    if (! this.isMoving) this.moveLeft()
   }
   move(top, left) {
+    this.isMoving = true
     let movedHorizontally = left !== undefined && left !== null && left !== 0
     let movedVertically = top !== undefined && top !== null && top !== 0
     if (movedHorizontally) {
@@ -147,15 +147,15 @@ class CarView {
       }
     }
     this.display()
-    return movedHorizontally || movedVertically
+    this.isMoving = movedHorizontally || movedVertically
   }
   moveLeft() {
-    const moved = this.move(0, -this.speed)
-    moved && (this.timeout = asafonov.timer.add(() => this.moveLeft()))
+    this.move(0, -this.speed)
+    this.isMoving && (this.timeout = asafonov.timer.add(() => this.moveLeft()))
   }
   moveRight() {
-    const moved = this.move(0, this.speed)
-    moved && (this.timeout = asafonov.timer.add(() => this.moveRight()))
+    this.move(0, this.speed)
+    this.isMoving && (this.timeout = asafonov.timer.add(() => this.moveRight()))
   }
   stop() {
     this.timeout && asafonov.timer.remove(this.timeout)
@@ -168,6 +168,7 @@ class CarView {
     this.element = null
     this.carSize = null
     this.roadSize = null
+    this.isMoving = null
   }
 }
 class EnemyView {
@@ -292,6 +293,8 @@ class GameView {
     this.carView = new CarView(asafonov.timer.getFPS() / 2)
     this.playButton = document.querySelector('.game_play')
     this.pauseButton = document.querySelector('.game_pause')
+    this.playButton.style.display = 'none'
+    this.pauseButton.style.display = 'none'
     this.onPlayClickProxy = this.onPlayClick.bind(this)
     this.onPauseClickProxy = this.onPauseClick.bind(this)
     this.onTouchProxy = this.onTouch.bind(this)
@@ -563,7 +566,6 @@ window.asafonov.settings = {
 }
 window.asafonov.player = null
 window.onerror = (msg, url, line) => {
-  alert(`${msg} on line ${line}`)
 }
 document.addEventListener("DOMContentLoaded", function (event) {
   asafonov.timer.setInterval(80)

@@ -59,14 +59,15 @@ public class MainActivity extends Activity {
 
         public void onSensorChanged(SensorEvent event) {
             float y = event.values[1];
-            double b = 1;
+            double b = 2;
+            String condition = "window !== null && window !== undefined && !! window.asafonov && !! asafonov.messageBus && !! asafonov.messageBus.send";
 
             if (y > b) {
-              mWebView.evaluateJavascript("asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
+              mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
             }
 
             if (y < -b) {
-              mWebView.evaluateJavascript("asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
+              mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
             }
         }
     };

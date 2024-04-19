@@ -239,15 +239,15 @@ body,
   margin-top: var(--palm_tree);
 }
 
-.util_section {    
+.util_section {
   position: absolute;
   top: var(--blur);
   z-index: 99;
-  
+
 }
 
 .util_section.score_section {
-  right: var(--tree);  
+  right: var(--tree);
 }
 
 .util_section.control_section {
@@ -262,7 +262,7 @@ body,
   font-size: calc(var(--height_car)/4);
   color: var(--color_util);
   text-shadow: 0 0 calc(var(--blur)*1.5) var(--color_util),
-               0 0 calc(var(--blur)*2) var(--color_util), 
+               0 0 calc(var(--blur)*2) var(--color_util),
                0 0 calc(var(--blur)*2) var(--color_road);
 }
 
@@ -278,15 +278,26 @@ body,
   content: 'ready?';
   color: var(--color_red);
   font-size: calc(var(--height_car)/4);
-  animation-fill-mode: forwards; 
+  animation-fill-mode: forwards;
   animation-timing-function: ease;
   animation-name: countdown;
   animation-duration: 5s;
   animation-delay: 1s;
 }
 
-.game_control.game_play, .game_control.game_pause {
-  display: none;
+.game_control {
+  height: calc(var(--height_car)/4);
+  display: flex;
+  align-items: center;
+}
+
+.game_control svg {
+  height: 70%;
+  filter: drop-shadow(0 0 calc(var(--blur)*1.5) var(--color_util));
+}
+
+.game_control svg path {
+  fill: var(--color_util);
 }
 
 @keyframes countdown {

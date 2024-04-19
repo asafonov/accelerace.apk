@@ -1,0 +1,2 @@
+* Code cleanup
+* Unuded permission removed

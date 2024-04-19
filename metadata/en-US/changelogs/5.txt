@@ -1,0 +1,3 @@
+* Add car control via gyroscope sensor
+* New application icon
+* Minor design fixes
