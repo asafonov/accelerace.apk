@@ -16,11 +16,13 @@ public class MainActivity extends Activity {
     private WebView mWebView;
     SensorManager sensorManager;
     Sensor sensor;
+    double angle;
 
     @Override
     @SuppressLint("SetJavaScriptEnabled")
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        angle = 0;
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -58,15 +60,17 @@ public class MainActivity extends Activity {
         }
 
         public void onSensorChanged(SensorEvent event) {
-            float y = event.values[1];
-            double b = 2;
+            angle += event.values[1];
+            double b = 8;
             String condition = "window !== null && window !== undefined && !! window.asafonov && !! asafonov.messageBus && !! asafonov.messageBus.send";
 
-            if (y > b) {
+            if (angle > b) {
+              angle = 0;
               mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
             }
 
-            if (y < -b) {
+            if (angle < -b) {
+              angle = 0;
               mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
             }
         }

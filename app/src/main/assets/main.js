@@ -99,7 +99,7 @@ class CarView {
     this.carRect = {
       height: rect.height + rect.top,
       width: rect.width + rect.left,
-      left: this.roadRect.left,
+      left: this.roadRect.left + this.roadRect.width / 2 - rect.width / 2,
       top: window.innerHeight - rect.height * 1.5 - rect.top
     }
     this.speed = this.roadRect.width / (speed || asafonov.timer.getFPS())
@@ -566,6 +566,7 @@ window.asafonov.settings = {
 }
 window.asafonov.player = null
 window.onerror = (msg, url, line) => {
+  if (!! window.asafonov.debug) alert(`${msg} on line ${line}`)
 }
 document.addEventListener("DOMContentLoaded", function (event) {
   asafonov.timer.setInterval(80)
