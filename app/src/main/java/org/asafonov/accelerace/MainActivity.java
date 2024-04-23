@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
         angle = 0;
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         mWebView = findViewById(R.id.activity_main_webview);
         WebSettings webSettings = mWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -60,18 +60,22 @@ public class MainActivity extends Activity {
         }
 
         public void onSensorChanged(SensorEvent event) {
-            angle += event.values[1];
-            double b = 8;
+            double y = event.values[2];
+            double threshold = 12;
             String condition = "window !== null && window !== undefined && !! window.asafonov && !! asafonov.messageBus && !! asafonov.messageBus.send";
 
-            if (angle > b) {
-              angle = 0;
-              mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
-            }
-
-            if (angle < -b) {
-              angle = 0;
-              mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
+            if (y > threshold) {
+                mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
+                angle = threshold;
+            } else if (y < -threshold) {
+                mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
+                angle = -threshold;
+            } else if (angle < 0) {
+                mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_RIGHT)", null);
+                angle = 0;
+            } else if (angle > 0) {
+                mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_LEFT)", null);
+                angle = 0;
             }
         }
     };

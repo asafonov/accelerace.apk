@@ -1,0 +1,2 @@
+* Improvements of control via gyroscope sensor
+* Minor bugfixes
