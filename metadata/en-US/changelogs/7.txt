@@ -1,0 +1,2 @@
+* Completely remake work with gyroscope sensor for better control
+* Add feature graphic
