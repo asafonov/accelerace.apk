@@ -1,0 +1,1 @@
+Use GAME_ROTATION_VECTOR sensor instead of ORIENTATION
