@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
         public void onSensorChanged(SensorEvent event) {
             double y = event.values[1];
             double m = 8;
-            String condition = "window !== null && window !== undefined && !! window.asafonov && !! asafonov.messageBus && !! asafonov.messageBus.send";
+            String condition = "window !== null && window !== undefined && !! window.asafonov && !! asafonov.messageBus && !! asafonov.messageBus.send && !! asafonov.settings.useGyro";
 
             mWebView.evaluateJavascript("if (" + condition + ") asafonov.messageBus.send(asafonov.events.CAR_MOVE_TO, " + y * m + ")", null);
         }
