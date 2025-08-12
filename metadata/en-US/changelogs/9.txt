@@ -1,0 +1,1 @@
+Add setting to switch between gyroscope sensor or screen tap to manage the car

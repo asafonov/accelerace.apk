@@ -251,8 +251,11 @@ body,
 }
 
 .util_section.control_section {
+  display: flex;
   left: var(--tree);
   cursor: pointer;
+  flex-direction: row;
+  gap: var(--blur);
 }
 
 .util_section .util_text,
