@@ -2,13 +2,14 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 33
+    namespace 'org.asafonov.accelerace'
 
     defaultConfig {
         applicationId "org.asafonov.accelerace"
         minSdkVersion 29
-        targetSdkVersion 33
-        versionCode 9
-        versionName "0.9"
+        targetSdkVersion 35
+        versionCode 10
+        versionName "0.10"
     }
     buildTypes {
         release {
