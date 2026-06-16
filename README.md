@@ -14,6 +14,6 @@ Third-party fonts
 
 **Font**: Reddit Mono
 
-**License**: [SIL Open Font License 1.1](https://github.com/asafonov/accelerace.apk/app/src/main/assets/OFL.txt)
+**License**: [SIL Open Font License 1.1](https://github.com/asafonov/accelerace.apk/blob/master/app/src/main/assets/OFL.txt)
 
 **Source**: [Github](https://github.com/reddit/redditsans)
