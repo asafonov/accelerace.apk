@@ -190,7 +190,7 @@ class CarView {
   }
 }
 class EnemyView {
-  constructor (speed, id) {
+  constructor (speed, id, isDrunk = 0) {
     this.speed = speed || 1
     this.id = id
     this.element = document.querySelector(`#car_${id}`)
@@ -205,6 +205,8 @@ class EnemyView {
       top: -rect.height
     }
     this.display()
+    const isHorizontalMove = Math.random() > 1 - isDrunk
+    this.horizontalMove = isHorizontalMove ? (Math.random() > 0.5 ? -1 : 1) * this.roadRect.width / 12 : 0
     this.moveVertical()
   }
   display() {
@@ -220,12 +222,21 @@ class EnemyView {
         movedVertically = false
       }
     }
+    if (movedHorizontally) {
+      this.carRect.left += left
+      if (this.carRect.left >= this.roadRect.right - this.carRect.width) {
+        this.carRect.left = this.roadRect.right - this.carRect.width
+      }
+      if (this.carRect.left <= this.roadRect.left) {
+        this.carRect.left = this.roadRect.left
+      }
+    }
     this.display()
-    return movedHorizontally || movedVertically
+    return movedVertically
   }
   moveVertical() {
     const top = this.carRect.top
-    const moved = this.move(this.speed, 0)
+    const moved = this.move(this.speed, top > window.innerHeight / 6 ? this.horizontalMove : 0)
     const isGameOver = this.isGameOver()
     if (isGameOver) {
       asafonov.messageBus.send(asafonov.events.GAME_OVER)
@@ -260,6 +271,7 @@ class EnemyView {
 }
 class EnemyListView {
   constructor (speed) {
+    this.total = 0
     this.enemiesOnScreen = []
     this.speed = speed
     this.doubleEnemy = false
@@ -274,8 +286,9 @@ class EnemyListView {
   }
   createEnemy() {
     if (this.enemiesOnScreen.length === 2) return
+    this.total++
     const id = this.enemiesOnScreen.length === 0 ? Math.round(Math.random()) + 1 : 3 - this.enemiesOnScreen[0].id
-    const view = new EnemyView(this.speed, id)
+    const view = new EnemyView(this.speed, id, Math.min(this.total / 50, 0.6))
     this.enemiesOnScreen.push(view)
   }
   onEnemyDestroyed (data) {
